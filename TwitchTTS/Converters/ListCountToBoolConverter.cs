@@ -1,0 +1,25 @@
+﻿using System.Collections;
+using System.Globalization;
+using System.Windows.Data;
+
+namespace TwitchTTS.Converters
+{
+    public class ListCountToBoolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is IList list)
+            {
+                // Enable the button if the list count is greater than 0
+                return list.Count > 0;
+            }
+
+            return false;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}

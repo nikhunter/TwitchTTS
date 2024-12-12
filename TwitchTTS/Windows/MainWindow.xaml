@@ -1,0 +1,248 @@
+﻿<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+    xmlns:converters="clr-namespace:TwitchTTS.Converters"
+    xmlns:busyIndicator="https://github.com/moh3ngolshani/BusyIndicator"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
+    xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+    ui:WindowHelper.UseModernWindowStyle="True"
+    mc:Ignorable="av" x:Class="TwitchTTS.MainWindow"
+    Title="Twitch TTS" SizeToContent="WidthAndHeight"
+    WindowStartupLocation="CenterScreen"
+    ResizeMode="CanResize"
+    >
+    <!--Width="550"
+        Height="350"-->
+    <Window.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBoolean" />
+        <converters:BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <converters:ListCountToBoolConverter x:Key="ListCountToBoolConverter" />
+        <converters:TTSButtonEnabledConverter x:Key="TTSButtonConverter"/>
+        <!-- Spinner Rotation Animation -->
+        <Storyboard x:Key="SpinnerAnimation" BeginTime="00:00:00" RepeatBehavior="Forever">
+            <DoubleAnimation
+            Storyboard.TargetName="SpinnerTransform"
+            Storyboard.TargetProperty="(RotateTransform.Angle)"
+            From="0"
+            To="360"
+            Duration="0:0:1" />
+        </Storyboard>
+        <sys:Double x:Key="IndicatorScaleX" >0.5</sys:Double>
+        <sys:Double x:Key="IndicatorScaleY" >0.5</sys:Double>
+        <Style TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="MinWidth" Value="75"/>
+        </Style>
+        <CollectionViewSource x:Key='ChattersSort' Source="{Binding Chatters}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="Username" />
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+        <CollectionViewSource x:Key='ActiveChattersSort' Source="{Binding ActiveChatters}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="Username" />
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+    </Window.Resources>
+
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- TOP CONTROL -->
+        <Grid Grid.Row="0" HorizontalAlignment="Center">
+            <!-- Buttons -->
+            <StackPanel Margin="2" Orientation="Horizontal">
+                <Button x:Name="ToggleTTSButton" Width="80" Background="Green" Content="Start TTS" Click="ToggleTTSButton_Click">
+                    <Button.IsEnabled>
+                        <MultiBinding Converter="{StaticResource TTSButtonConverter}">
+                            <Binding Path="Username"/>
+                            <Binding Path="Voices"/>
+                        </MultiBinding>
+                    </Button.IsEnabled>
+                </Button>
+                <Button Width="80" Content="Settings" VerticalContentAlignment="Center" Click="OpenSettings" Margin="3,0" />
+                <Button Width="80" Content="Update" IsEnabled="{Binding UpdateAvailable}" VerticalContentAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- LISTS -->
+        <Grid Grid.Row="1" Margin="5" MinWidth="800" MinHeight="200" MaxHeight="300">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Viewer List -->
+            <Grid Grid.Column="0" Margin="0,0,2,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Label Grid.Row="0" Content="Chatters:"/>
+                <ListView x:Name="ChatterListView" Grid.Row="1" ItemsSource="{Binding Source={StaticResource ChattersSort}}" HorizontalAlignment="Stretch">
+                    <ListView.View>
+                        <GridView>
+                            <!-- Name Column -->
+                            <GridViewColumn Header="Name" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Username}" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <!-- Voice Column with ComboBox -->
+                            <GridViewColumn Header="Voice" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <ComboBox ItemsSource="{Binding DataContext.Voices, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      SelectedItem="{Binding Voice, Mode=TwoWay}"
+                                                      DisplayMemberPath="Name" Width="Auto">
+                                            </ComboBox>
+                                        </Grid>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <!-- Enabled Column with CheckBox, compact and centered -->
+                            <GridViewColumn Header="Enabled" Width="75">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox IsChecked="{Binding TTSEnabled, Mode=TwoWay}" Unchecked="ChatterCheckBox_Unchecked" Checked="ChatterCheckBox_Checked"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
+
+            <!-- Active TTS Users -->
+            <Grid Grid.Column="1" Margin="2,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Label Grid.Row="0" Content="Active TTS Users:"/>
+                <ListView x:Name="ActiveChatterListView" Grid.Row="1" ItemsSource="{Binding Source={StaticResource ActiveChattersSort}}" HorizontalAlignment="Stretch">
+                    <ListView.View>
+                        <GridView>
+                            <!-- Name Column -->
+                            <GridViewColumn Header="Name" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Username}" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <!-- Voice Column with ComboBox -->
+                            <GridViewColumn Header="Voice" Width="Auto">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <ComboBox ItemsSource="{Binding DataContext.Voices, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                      SelectedItem="{Binding Voice, Mode=TwoWay}"
+                                                      DisplayMemberPath="Name" MinWidth="120" Width="Auto">
+                                            </ComboBox>
+                                        </Grid>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <!-- Enabled Column with CheckBox, compact and centered -->
+                            <GridViewColumn Header="Enabled" Width="75">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox IsChecked="{Binding TTSEnabled, Mode=TwoWay}" Unchecked="ChatterCheckBox_Unchecked" Checked="ChatterCheckBox_Checked"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
+        </Grid>
+
+        <!-- CHAT -->
+        <Grid Grid.Row="2" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Chat History -->
+            <Label Grid.Row="0" Content="Chat history:"/>
+            <ScrollViewer Grid.Row="1" x:Name="ChatScroll" VerticalScrollBarVisibility="Auto" Width="510" MinHeight="60" VerticalContentAlignment="Stretch">
+                <ItemsControl ItemsSource="{Binding ChatHistoryCollection}" FontSize="18">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Margin="5,0" TextWrapping="Wrap"><Run Foreground="{Binding UsernameColour}" FontWeight="Bold" Text="{Binding Username}" /><Run Text=" "/><Run Text=": " /><Run Text=" "/><Run Text="{Binding Message}"/></TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+        <!-- STATS -->
+        <Grid Grid.Row="3"/>
+    </Grid>
+
+    <!--
+    <Grid PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown">
+        <StackPanel Name="ParentPanel" Orientation="Vertical">
+            <StackPanel Margin="20,20,20,5" Orientation="Horizontal" VerticalAlignment="Top">
+                <TextBox Name="UsernameTextBox" Text="{Binding Path=Username, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding TTSEnabled, Converter={StaticResource InverseBoolean}}" GotFocus="UsernameTextBox_GotFocus" LostFocus="UsernameTextBox_LostFocus" VerticalContentAlignment="Center" Width="400" Height="25"/>
+                <Button Name="ToggleTTSButton" Width="100" Height="25" Content="Start TTS" Margin="10,0,0,0" Click="ToggleTTSButton_Click">
+                    <Button.IsEnabled>
+                        <MultiBinding Converter="{StaticResource TTSButtonConverter}">
+                            <Binding Path="Username"/>
+                            <Binding Path="Voices"/>
+                        </MultiBinding>
+                    </Button.IsEnabled>
+                </Button>
+            </StackPanel>
+            <Label Margin="15,0,20,-3">Chat history:</Label>
+            <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto" Width="510" Height="242" Margin="20,0,20,20">
+                <ItemsControl ItemsSource="{Binding ChatHistoryCollection}" FontSize="18">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Margin="5,0" TextWrapping="Wrap">
+                            <Run Foreground="{Binding UsernameColour}" FontWeight="Bold" Text="{Binding Username}" />
+                            <Run Text=": " />
+                            <Run Text="{Binding Message}"/>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </StackPanel>
+        <Canvas HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20">
+            <busyIndicator:BusyMask Width="100" Height="100" Margin="-40,-22,0,0" x:Name="BusyIndicator" 
+                                Background="Transparent"
+                                BorderThickness="0"
+                                IsBusy="True" 
+                                IndicatorType="Cogs" 
+                                BusyContent=""
+                                IsBusyAtStartup="True"
+                                Visibility="{Binding Path=TTSProcessing, Converter={StaticResource BoolToVis}}">
+            </busyIndicator:BusyMask>
+        </Canvas>
+    </Grid>
+    -->
+</Window>
